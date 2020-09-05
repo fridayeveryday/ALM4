@@ -85,7 +85,7 @@ public class Script {
         }
         for (int i = 0; i < lexemes.size(); i++) {
             if (lexemes.get(i).name.equals(lexeme.content)) {
-                lexemes.set(i, new Lexeme(tL, lexeme.name, value));
+                lexemes.set(i, new Lexeme(tL, lexemes.get(i).name, value));
                 return true;
             }
         }
