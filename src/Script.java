@@ -37,6 +37,7 @@ public class Script {
             } else if (typeCurrentLexeme == TypeLexemes.out) {
                 prepareOutput(currentLexeme);
             }
+            numberOfLine++;
 
         }
 //        lexemes.add(parseLine(readOneLine(scanner)));
