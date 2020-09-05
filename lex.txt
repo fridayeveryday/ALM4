@@ -1,0 +1,16 @@
+num - для всех чисел
+str - для всех строк и символов
+in -  оператор ввода
+out - оператор вывода
+if () :
+else
+
+
+out "asdf"
+else
+if a
+a = asd
+if a
+	out a
+else
+	out "asdf"
