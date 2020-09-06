@@ -55,13 +55,13 @@ public class Script {
                     System.out.printf("Error at %d line", numberOfLine);
                     return;
                 }
-                currentLexeme.name = "0";
+                currentLexeme.name = "falseIf";
                 if ((boolean) resIf) {
                     currentLvlOfNesting++;
                     inCondition = true;
-                    currentLexeme.name = "1";
+                    currentLexeme.name = "trueIf";
                 }
-                lexemes.set(lexemes.size() - 1, currentLexeme);
+//                lexemes.set(lexemes.size() - 1, currentLexeme);
             } else if (typeCurrentLexeme == TypeLexemes.conEl) {
                 if (!prepareElse(currentLexeme)){
                     System.out.printf("Error at %d line", numberOfLine);
@@ -93,7 +93,7 @@ public class Script {
         for (int i = lexemes.size() - 1; i >= 0; i--) {
             if (lexemes.get(i).lvlOfNesting == lexeme.lvlOfNesting
                     && lexemes.get(i).type == TypeLexemes.conIf){
-                if (lexemes.get(i).name.equals("0")){
+                if (lexemes.get(i).name.equals("falseIf")){
                     currentLvlOfNesting++;
                 }
                 return true;
@@ -253,7 +253,7 @@ public class Script {
     public static String substituteLexemes2Expression(Lexeme lexeme) {
         ArrayList<String> elemOfContents = new ArrayList<>();
         StringBuilder operands = new StringBuilder();
-        // substitute to expression
+        // parse expression into simple elements
         for (char ch : lexeme.content.toCharArray()) {
             if (arithmetic.operations.contains(Character.toString(ch))) {
                 if (operands.length() != 0) {
@@ -326,10 +326,10 @@ public class Script {
                 content = line.substring(line.indexOf('=') + 1).trim();
                 if (content.contains(" "))
                     return null;
-
             }
             // name is chars between 0 and index of "=" - 1
-            name = line.substring(0, line.indexOf('=') - 1);
+            name = line.substring(0, line.indexOf('='));
+            name=name.trim();
 
         }
         return new Lexeme(lvlOfNesting, type, name, content);
