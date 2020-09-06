@@ -38,7 +38,7 @@ public class Arithmetic {
         arithmeticExpression = arithmeticExpression.replaceAll("\\s+", "");
         ArrayList<String> expressionComponents = parseExpression(arithmeticExpression);
         if (!checkIsCorrectExpr(expressionComponents)) {
-            System.out.println("Incorrect format of expression. Please recheck it.");
+//            System.out.println("Incorrect format of expression. Please recheck it.");
             return null;
         }
         ArrayList<String> elemInRPN = makeRPN(expressionComponents);

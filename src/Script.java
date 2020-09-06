@@ -10,6 +10,8 @@ public class Script {
     public static String path = "C:\\Temp\\ALM4.txt";
     public static Scanner scanner;
     private static Arithmetic arithmetic;
+    public static int currentLvlOfNesting = 0;
+    public static boolean inCondition = false;
 
     ArrayList<String> lexemesType = new ArrayList<>(Arrays.asList("num", "str", "if", "else", "in", "out"));
     public static ArrayList<Lexeme> lexemes = new ArrayList<>();
@@ -18,10 +20,18 @@ public class Script {
 //        System.out.println(TypeLexemes.num);
         arithmetic = new Arithmetic();
         openFile(path);
+
         int numberOfLine = 1;
         while (scanner.hasNext()) {
             String oneLine = readOneLine(scanner);
             Lexeme currentLexeme = parseLine(oneLine);
+            if (currentLexeme == null) {
+                System.out.printf("Error at %d line", numberOfLine);
+                return;
+            }
+            if (currentLexeme.lvlOfNesting != currentLvlOfNesting) {
+                continue;
+            }
             lexemes.add(currentLexeme);
             TypeLexemes typeCurrentLexeme = currentLexeme.type;
             if (typeCurrentLexeme == TypeLexemes.num) {
@@ -35,7 +45,20 @@ public class Script {
                     return;
                 }
             } else if (typeCurrentLexeme == TypeLexemes.out) {
-                prepareOutput(currentLexeme);
+                if (!prepareOutput(currentLexeme)) {
+                    System.out.printf("Error at %d line", numberOfLine);
+                    return;
+                }
+            } else if (typeCurrentLexeme == TypeLexemes.conIf) {
+                Object resIf = prepareIfCondition(currentLexeme);
+                if (resIf == null) {
+                    System.out.printf("Error at %d line", numberOfLine);
+                    return;
+                }
+                if ((boolean) resIf) {
+                    currentLvlOfNesting++;
+                    inCondition=true;
+                }
             }
             numberOfLine++;
 
@@ -58,16 +81,98 @@ public class Script {
 
     }
 
-    public static void prepareOutput(Lexeme lexeme) {
+    public static Object prepareIfCondition(Lexeme lexeme) {
+        ArrayList<String> conditionParts = parseIfCondition(lexeme.content.trim());
+        if (conditionParts == null) {
+            return null;
+        }
+        Lexeme lex4LeftExpr = new Lexeme(lexeme.lvlOfNesting, lexeme.type, "leftCondition", conditionParts.get(0));
+        boolean successCheckLeft = prepareNum(lex4LeftExpr);
+        if (!successCheckLeft) {
+            return null;
+        }
+        Double leftRes = Double.parseDouble(lex4LeftExpr.content);
+        Lexeme lex4RightExpr = new Lexeme(lexeme.lvlOfNesting, lexeme.type, "rightCondition", conditionParts.get(2));
+        boolean successCheckRight = prepareNum(lex4RightExpr);
+        if (!successCheckRight) {
+            return null;
+        }
+        Double rightRes = Double.parseDouble(lex4RightExpr.content);
+
+        return switch (conditionParts.get(1)) {
+            case ">" -> leftRes > rightRes;
+            case "<" -> leftRes < rightRes;
+            case ">=" -> leftRes >= rightRes;
+            case "<=" -> leftRes <= rightRes;
+            case "==" -> leftRes.equals(rightRes);
+            case "!=" -> !leftRes.equals(rightRes);
+            default -> null;
+        };
+    }
+
+    public static ArrayList<String> conditions = new ArrayList<String>(Arrays.asList(">", "<", ">=", "<=", "==", "!="));
+    public static ArrayList<String> charsOfConditions = new ArrayList<String>(Arrays.asList(">", "<", "=", "!"));
+
+    public static ArrayList<String> parseIfCondition(String condition) {
+        ArrayList<String> partsOfCondition = new ArrayList<>();
+        StringBuilder partOfCondition = new StringBuilder();
+        char[] conditionByChar = condition.toCharArray();
+        char oneChar = conditionByChar[0];
+        int i = 0;
+        while (!charsOfConditions.contains(Character.toString(oneChar))) {
+            partOfCondition.append(oneChar);
+            i++;
+            if (i > conditionByChar.length)
+                return null;
+            oneChar = conditionByChar[i];
+
+        }
+        partsOfCondition.add(partOfCondition.toString().trim());
+        partOfCondition.setLength(0);
+        //take a current condition char
+        partOfCondition.append(oneChar);
+
+        i++;
+        oneChar = conditionByChar[i];
+        if (charsOfConditions.contains(Character.toString(conditionByChar[i]))) {
+            partOfCondition.append(oneChar);
+            i++;
+        }
+
+        partsOfCondition.add(partOfCondition.toString().trim());
+        partOfCondition.setLength(0);
+
+        while (i < conditionByChar.length) {
+            oneChar = conditionByChar[i];
+            partOfCondition.append(oneChar);
+            i++;
+
+        }
+        partsOfCondition.add(partOfCondition.toString().trim());
+        return partsOfCondition;
+    }
+
+    public static boolean prepareOutput(Lexeme lexeme) {
         String lexemeContent = lexeme.content;
-        if (lexemeContent.contains("\"")) {
-            System.out.println(lexemeContent.replaceAll("\"", ""));
-        } else if (lexemeContent.matches("[-]?\\d+[.,]?\\d*")) {
+        // if output a number
+        if (lexemeContent.matches("[-]?\\d+[.,]?\\d*")) {
             System.out.println(lexemeContent);
         } else {
             prepareNum(lexeme);
-            System.out.println(lexeme.content);
+            lexemeContent = lexeme.content;
+            if (lexeme.content.matches("[-]?\\d+[.,]?\\d*"))
+                System.out.println(lexeme.content);
         }
+        if (lexemeContent.contains("\"")) {
+            String outputStr = checkIsCorrectString(lexemeContent);
+            if (outputStr == null)
+                return false;
+            if (outputStr.contains("+")) {
+                outputStr = outputStr.replaceAll("[+]", "");
+            }
+            System.out.println(outputStr.replaceAll("\"", ""));
+        }
+        return true;
     }
 
     public static boolean prepareInput(Lexeme lexeme) {
@@ -81,15 +186,19 @@ public class Script {
             value = String.valueOf(Double.parseDouble(value));
             tL = TypeLexemes.num;
         } catch (Exception ignored) {
+            StringBuilder stringBuffer = new StringBuilder(value);
+            stringBuffer.insert(0, '\"');
+            stringBuffer.insert(stringBuffer.length(), '\"');
+            value = stringBuffer.toString();
             tL = TypeLexemes.str;
         }
         for (int i = 0; i < lexemes.size(); i++) {
             if (lexemes.get(i).name.equals(lexeme.content)) {
-                lexemes.set(i, new Lexeme(tL, lexemes.get(i).name, value));
+                lexemes.set(i, new Lexeme(lexeme.lvlOfNesting, tL, lexemes.get(i).name, value));
                 return true;
             }
         }
-        lexemes.add(new Lexeme(tL, lexeme.name, value));
+        lexemes.add(new Lexeme(lexeme.lvlOfNesting, tL, lexeme.content, value));
         return true;
     }
 //
@@ -123,21 +232,23 @@ public class Script {
     public static String substituteLexemes2Expression(Lexeme lexeme) {
         ArrayList<String> elemOfContents = new ArrayList<>();
         StringBuilder operands = new StringBuilder();
+        // substitute to expression
         for (char ch : lexeme.content.toCharArray()) {
             if (arithmetic.operations.contains(Character.toString(ch))) {
                 if (operands.length() != 0) {
-                    elemOfContents.add(operands.toString());
+                    elemOfContents.add(operands.toString().trim());
                     operands.setLength(0);
                 }
-                elemOfContents.add(Character.toString(ch));
+                elemOfContents.add(Character.toString(ch).trim());
             } else {
                 operands.append(ch);
             }
         }
         if (operands.length() != 0) {
-            elemOfContents.add(operands.toString());
+            elemOfContents.add(operands.toString().trim());
             operands.setLength(0);
         }
+        // substitute from global lexemes to local one
         for (int i = 0; i < lexemes.size() - 1; i++) {
             Lexeme elem = lexemes.get(i);
             for (int j = 0; j < elemOfContents.size(); j++) {
@@ -157,7 +268,15 @@ public class Script {
     }
 
     public static Lexeme parseLine(String line) {
-        line = line.replaceAll("^ +| +$|( )+", "$1");
+//        line = line.replaceAll("^ +| +$|( )+", "$1");
+        int lineLengthBefore = line.length();
+        line = line.replaceAll("\t", "");
+        int lineLengthAfter = line.length();
+        int lvlOfNesting = lineLengthBefore - lineLengthAfter;
+        if (lvlOfNesting < currentLvlOfNesting){
+            currentLvlOfNesting--;
+            inCondition=false;
+        }
         String beginPartOfStr = line.length() > 4 ? line.substring(0, 5) : line.substring(0, 3);
         TypeLexemes type;
         String name = "";
@@ -178,14 +297,30 @@ public class Script {
 //            int indexOfSignEqual = line.indexOf('=');
             if (line.contains("\"")) {
                 type = TypeLexemes.str;
+                content = checkIsCorrectString(line);
+                if (content == null)
+                    return null;
             } else {
                 type = TypeLexemes.num;
+                content = line.substring(line.indexOf('=') + 1).trim();
+                if (content.contains(" "))
+                    return null;
 
             }
+            // name is chars between 0 and index of "=" - 1
             name = line.substring(0, line.indexOf('=') - 1);
-            content = line.substring(line.indexOf('=') + 2);
+
         }
-        return new Lexeme(type, name, content);
+        return new Lexeme(lvlOfNesting, type, name, content);
+    }
+
+    public static String checkIsCorrectString(String string) {
+        int startQuotationMark = string.indexOf("\"", string.indexOf('=') + 1);
+        int endQuotationMark = string.indexOf('"', startQuotationMark + 1);
+        if (string.length() > endQuotationMark + 1)
+            return null;
+        else
+            return string.substring(startQuotationMark, endQuotationMark + 1);
     }
 
     public static boolean openFile(String path) {
@@ -209,11 +344,13 @@ public class Script {
 }
 
 class Lexeme {
+    int lvlOfNesting;
     TypeLexemes type;
     String name;
     String content;
 
-    public Lexeme(TypeLexemes type, String name, String content) {
+    public Lexeme(int lvlOfNesting, TypeLexemes type, String name, String content) {
+        this.lvlOfNesting = lvlOfNesting;
         this.type = type;
         this.name = name;
         this.content = content;
