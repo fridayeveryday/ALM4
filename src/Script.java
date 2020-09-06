@@ -55,18 +55,19 @@ public class Script {
                     System.out.printf("Error at %d line", numberOfLine);
                     return;
                 }
-                currentLexeme.name = "falseIf";
+                currentLexeme.type = TypeLexemes.conIfFalse;
                 if ((boolean) resIf) {
                     currentLvlOfNesting++;
                     inCondition = true;
-                    currentLexeme.name = "trueIf";
+                    currentLexeme.type = TypeLexemes.conIfTrue;
                 }
 //                lexemes.set(lexemes.size() - 1, currentLexeme);
             } else if (typeCurrentLexeme == TypeLexemes.conEl) {
-                if (!prepareElse(currentLexeme)){
-                    System.out.printf("Error at %d line", numberOfLine);
-                    return;
-                }
+                prepareElse(currentLexeme);
+//                if (!prepareElse(currentLexeme)) {
+//                    System.out.printf("Error at %d line", numberOfLine);
+//                    return;
+//                }
             }
             numberOfLine++;
 
@@ -89,17 +90,14 @@ public class Script {
 
     }
 
-    public static boolean prepareElse(Lexeme lexeme) {
+    public static void prepareElse(Lexeme lexeme) {
         for (int i = lexemes.size() - 1; i >= 0; i--) {
             if (lexemes.get(i).lvlOfNesting == lexeme.lvlOfNesting
-                    && lexemes.get(i).type == TypeLexemes.conIf){
-                if (lexemes.get(i).name.equals("falseIf")){
-                    currentLvlOfNesting++;
-                }
-                return true;
+                    && lexemes.get(i).type == TypeLexemes.conIfFalse) {
+                currentLvlOfNesting++;
+                return;
             }
         }
-        return false;
     }
 
     public static Object prepareIfCondition(Lexeme lexeme) {
@@ -295,7 +293,7 @@ public class Script {
         int lineLengthAfter = line.length();
         int lvlOfNesting = lineLengthBefore - lineLengthAfter;
         if (lvlOfNesting < currentLvlOfNesting) {
-            currentLvlOfNesting--;
+            currentLvlOfNesting = lvlOfNesting;
             inCondition = false;
         }
         String beginPartOfStr = line.length() > 4 ? line.substring(0, 5) : line.substring(0, 3);
@@ -329,7 +327,7 @@ public class Script {
             }
             // name is chars between 0 and index of "=" - 1
             name = line.substring(0, line.indexOf('='));
-            name=name.trim();
+            name = name.trim();
 
         }
         return new Lexeme(lvlOfNesting, type, name, content);
@@ -379,7 +377,7 @@ class Lexeme {
 }
 
 enum TypeLexemes {
-    num, str, conIf, conEl, in, out
+    num, str, conIf, conEl, in, out, conIfTrue, conIfFalse
 }
 
 
