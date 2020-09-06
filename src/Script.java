@@ -55,9 +55,17 @@ public class Script {
                     System.out.printf("Error at %d line", numberOfLine);
                     return;
                 }
+                currentLexeme.name = "0";
                 if ((boolean) resIf) {
                     currentLvlOfNesting++;
-                    inCondition=true;
+                    inCondition = true;
+                    currentLexeme.name = "1";
+                }
+                lexemes.set(lexemes.size() - 1, currentLexeme);
+            } else if (typeCurrentLexeme == TypeLexemes.conEl) {
+                if (!prepareElse(currentLexeme)){
+                    System.out.printf("Error at %d line", numberOfLine);
+                    return;
                 }
             }
             numberOfLine++;
@@ -79,6 +87,19 @@ public class Script {
 //        }
 
 
+    }
+
+    public static boolean prepareElse(Lexeme lexeme) {
+        for (int i = lexemes.size() - 1; i >= 0; i--) {
+            if (lexemes.get(i).lvlOfNesting == lexeme.lvlOfNesting
+                    && lexemes.get(i).type == TypeLexemes.conIf){
+                if (lexemes.get(i).name.equals("0")){
+                    currentLvlOfNesting++;
+                }
+                return true;
+            }
+        }
+        return false;
     }
 
     public static Object prepareIfCondition(Lexeme lexeme) {
@@ -273,9 +294,9 @@ public class Script {
         line = line.replaceAll("\t", "");
         int lineLengthAfter = line.length();
         int lvlOfNesting = lineLengthBefore - lineLengthAfter;
-        if (lvlOfNesting < currentLvlOfNesting){
+        if (lvlOfNesting < currentLvlOfNesting) {
             currentLvlOfNesting--;
-            inCondition=false;
+            inCondition = false;
         }
         String beginPartOfStr = line.length() > 4 ? line.substring(0, 5) : line.substring(0, 3);
         TypeLexemes type;
