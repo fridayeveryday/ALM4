@@ -13,13 +13,14 @@ public class Script {
     public static int currentLvlOfNesting = 0;
     public static boolean inCondition = false;
 
-    ArrayList<String> lexemesType = new ArrayList<>(Arrays.asList("num", "str", "if", "else", "in", "out"));
     public static ArrayList<Lexeme> lexemes = new ArrayList<>();
 
     public static void main(String[] args) {
-//        System.out.println(TypeLexemes.num);
         arithmetic = new Arithmetic();
-        openFile(path);
+        if (!openFile(path)){
+            System.out.print("File is not exist.");
+            return;
+        }
 
         int numberOfLine = 1;
         while (scanner.hasNext()) {
@@ -35,22 +36,22 @@ public class Script {
             lexemes.add(currentLexeme);
             TypeLexemes typeCurrentLexeme = currentLexeme.type;
             if (typeCurrentLexeme == TypeLexemes.num) {
-                if (!prepareNum(currentLexeme)) {
+                if (!treatNum(currentLexeme)) {
                     System.out.printf("Error at %d line", numberOfLine);
                     return;
                 }
             } else if (typeCurrentLexeme == TypeLexemes.in) {
-                if (!prepareInput(currentLexeme)) {
+                if (!treatInput(currentLexeme)) {
                     System.out.printf("Error at %d line", numberOfLine);
                     return;
                 }
             } else if (typeCurrentLexeme == TypeLexemes.out) {
-                if (!prepareOutput(currentLexeme)) {
+                if (!treatOutput(currentLexeme)) {
                     System.out.printf("Error at %d line", numberOfLine);
                     return;
                 }
             } else if (typeCurrentLexeme == TypeLexemes.conIf) {
-                Object resIf = prepareIfCondition(currentLexeme);
+                Object resIf = treatIfCondition(currentLexeme);
                 if (resIf == null) {
                     System.out.printf("Error at %d line", numberOfLine);
                     return;
@@ -61,36 +62,18 @@ public class Script {
                     inCondition = true;
                     currentLexeme.type = TypeLexemes.conIfTrue;
                 }
-//                lexemes.set(lexemes.size() - 1, currentLexeme);
             } else if (typeCurrentLexeme == TypeLexemes.conEl) {
-                prepareElse(currentLexeme);
-//                if (!prepareElse(currentLexeme)) {
-//                    System.out.printf("Error at %d line", numberOfLine);
-//                    return;
-//                }
+                treatElse(currentLexeme);
             }
             numberOfLine++;
 
         }
-//        lexemes.add(parseLine(readOneLine(scanner)));
-//        lexemes.add(parseLine(readOneLine(scanner)));
-//        lexemes.add(parseLine(readOneLine(scanner)));
-//        System.out.println(lexemes.get(0).content);
-//
-//        prepareNum(lexemes.get(0));
-//        prepareNum(lexemes.get(1));
-//        prepareNum(lexemes.get(2));
-//        ArrayList<String> codeLines = new ArrayList<>();
-//        while (scanner.hasNext()) {
-////            String oneLine = readCode(scanner);
-//
-//            System.out.println(readCode(scanner));
-//        }
+
 
 
     }
 
-    public static void prepareElse(Lexeme lexeme) {
+    public static void treatElse(Lexeme lexeme) {
         for (int i = lexemes.size() - 1; i >= 0; i--) {
             if (lexemes.get(i).lvlOfNesting == lexeme.lvlOfNesting
                     && lexemes.get(i).type == TypeLexemes.conIfFalse) {
@@ -100,19 +83,19 @@ public class Script {
         }
     }
 
-    public static Object prepareIfCondition(Lexeme lexeme) {
+    public static Object treatIfCondition(Lexeme lexeme) {
         ArrayList<String> conditionParts = parseIfCondition(lexeme.content.trim());
         if (conditionParts == null) {
             return null;
         }
         Lexeme lex4LeftExpr = new Lexeme(lexeme.lvlOfNesting, lexeme.type, "leftCondition", conditionParts.get(0));
-        boolean successCheckLeft = prepareNum(lex4LeftExpr);
+        boolean successCheckLeft = treatNum(lex4LeftExpr);
         if (!successCheckLeft) {
             return null;
         }
         Double leftRes = Double.parseDouble(lex4LeftExpr.content);
         Lexeme lex4RightExpr = new Lexeme(lexeme.lvlOfNesting, lexeme.type, "rightCondition", conditionParts.get(2));
-        boolean successCheckRight = prepareNum(lex4RightExpr);
+        boolean successCheckRight = treatNum(lex4RightExpr);
         if (!successCheckRight) {
             return null;
         }
@@ -171,13 +154,13 @@ public class Script {
         return partsOfCondition;
     }
 
-    public static boolean prepareOutput(Lexeme lexeme) {
+    public static boolean treatOutput(Lexeme lexeme) {
         String lexemeContent = lexeme.content;
         // if output a number
         if (lexemeContent.matches("[-]?\\d+[.,]?\\d*")) {
             System.out.println(lexemeContent);
         } else {
-            prepareNum(lexeme);
+            treatNum(lexeme);
             lexemeContent = lexeme.content;
             if (lexeme.content.matches("[-]?\\d+[.,]?\\d*"))
                 System.out.println(lexeme.content);
@@ -194,7 +177,7 @@ public class Script {
         return true;
     }
 
-    public static boolean prepareInput(Lexeme lexeme) {
+    public static boolean treatInput(Lexeme lexeme) {
         if (lexeme.content.contains(" ")) {
             return false;
         }
@@ -220,12 +203,8 @@ public class Script {
         lexemes.add(new Lexeme(lexeme.lvlOfNesting, tL, lexeme.content, value));
         return true;
     }
-//
-//    public static boolean prepareCondition(Lexeme lexeme) {
-//
-//    }
 
-    public static boolean prepareNum(Lexeme lexeme) {
+    public static boolean treatNum(Lexeme lexeme) {
         Pattern p = Pattern.compile("[a-zA-Z]+");
         String candidate = lexeme.content;
         Matcher m = p.matcher(candidate);
@@ -296,6 +275,8 @@ public class Script {
             currentLvlOfNesting = lvlOfNesting;
             inCondition = false;
         }
+        if (line.length()<3)
+            return null;
         String beginPartOfStr = line.length() > 4 ? line.substring(0, 5) : line.substring(0, 3);
         TypeLexemes type;
         String name = "";
